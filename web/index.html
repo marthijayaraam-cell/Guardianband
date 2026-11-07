@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+  <title>GuardianBand - Real-Time IoT Fall Monitor &amp; TinyML AI Health Platform</title>
+  <meta name="description" content="AI-powered wearable fall detection, TinyML edge classification, and web ODF/PDF multi-incident reports.">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#00f5ff">
+  <!-- Mobile & PWA App Optimization Tags -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="GuardianBand">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/564/564619.png">
+
+  <!-- Google Fonts & Font Awesome Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Client-Side Libraries: Charts, ODF & PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Firebase Compat SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- ========================================================================= -->
+  <!-- STRICT AUTHENTICATION PORTAL (FULL SCREEN ON LOAD) -->
+  <!-- ========================================================================= -->
+  <div class="auth-portal" id="authPortal">
+    <div class="auth-bg-glow"></div>
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="brand-hexagon">
+          <i class="fa-solid fa-heart-pulse"></i>
+        </div>
+        <h2>GuardianBand <span class="neon-tag">TinyML</span></h2>
+        <p class="brand-subtitle">Cloud IoT Fall Monitor &amp; Real-Time Telemetry Portal</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLogin">Sign In</button>
+        <button class="auth-tab" id="tabRegister">Create Account</button>
+      </div>
+
+      <form id="authForm" onsubmit="return false;">
+        <div class="form-group">
+          <label><i class="fa-solid fa-envelope"></i> Authorized Caregiver Email</label>
+          <input type="email" id="authEmail" placeholder="caregiver@health.org" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label><i class="fa-solid fa-lock"></i> Security Password</label>
+          <input type="password" id="authPassword" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+
+        <div class="auth-error hidden" id="authError"></div>
+
+        <button class="btn btn-primary btn-block btn-neon" id="btnAuthSubmit">
+          <i class="fa-solid fa-right-to-bracket"></i> Sign In to Health Portal
+        </button>
+
+        <div class="auth-divider">
+          <span>OR</span>
+        </div>
+
+        <button type="button" class="btn btn-google btn-block" id="btnGoogleSignIn">
+          <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+          </svg>
+          <span>Sign In with Google</span>
+        </button>
+      </form>
+
+      <div class="auth-footer-notes">
+        <p><i class="fa-solid fa-shield-check text-neon-green"></i> Encrypted Firebase Authentication &amp; Live Telemetry Session</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- FIRST-TIME PATIENT PROFILE SETUP MODAL (Shown once if no profile in DB) -->
+  <!-- ========================================================================= -->
+  <div class="modal-overlay hidden" id="patientSetupModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-icon"><i class="fa-solid fa-user-plus"></i></div>
+        <div>
+          <h3>Setup Patient &amp; Wearable Profile</h3>
+          <p>Please enter the patient details once. They will be saved to your account in the cloud database.</p>
+        </div>
+      </div>
+
+      <form id="setupProfileForm" onsubmit="return false;">
+        <div class="form-grid">
+          <div class="form-group">
+            <label><i class="fa-solid fa-user"></i> Patient Full Name *</label>
+            <input type="text" id="setupPatientName" placeholder="e.g. Margaret Jenkins" required>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-cake-candles"></i> Age *</label>
+            <input type="number" id="setupPatientAge" placeholder="e.g. 78" required min="1" max="120">
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-user-doctor"></i> Primary Caregiver Name *</label>
+            <input type="text" id="setupCaregiverName" placeholder="e.g. Dr. Thomas Wright" required>
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-phone"></i> Emergency Phone Number</label>
+            <input type="tel" id="setupEmergencyPhone" placeholder="+1 (555) 234-5678">
+          </div>
+          <div class="form-group full-width">
+            <label><i class="fa-solid fa-notes-medical"></i> Clinical Observations &amp; Pre-existing Conditions</label>
+            <textarea id="setupClinicalNotes" rows="3" placeholder="e.g. History of osteoporosis, unsteady gait, mild arrhythmia. Wearable continuous fall monitoring enabled."></textarea>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-block btn-neon" id="btnSaveProfile">
+          <i class="fa-solid fa-floppy-disk"></i> Save Profile &amp; Start Monitoring
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MAIN DASHBOARD (Visible only when authenticated) -->
+  <!-- ========================================================================= -->
+  <div class="app-container hidden" id="mainDashboard">
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="logo-container">
+        <div class="logo-icon pulse-glow"><i class="fa-solid fa-heart-pulse"></i></div>
+        <div class="logo-text">
+          <h1>GuardianBand <span class="neon-badge">TINYML v3.4</span></h1>
+          <span class="badge-sub">Dual-Core ESP32 Edge AI &amp; Cloud Safety Platform</span>
+        </div>
+      </div>
+
+      <div class="header-status">
+        <!-- User Profile Pill -->
+        <div class="user-badge" id="userBadge">
+          <i class="fa-solid fa-circle-user"></i>
+          <span id="userEmailText">Loading...</span>
+          <button class="btn-logout" id="btnLogout" title="Sign Out of Portal"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
+        </div>
+
+        <!-- System State Pill -->
+        <div class="status-indicator-pill" id="globalStatusPill">
+          <span class="status-dot"></span>
+          <span id="globalStatusText">SYSTEM NORMAL</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ========================================================================= -->
+    <!-- DEDICATED HARDWARE CONNECTION HUD BAR -->
+    <!-- ========================================================================= -->
+    <div class="hardware-hud-bar" id="hardwareHudBar">
+      <div class="hud-left">
+        <div class="hud-radar-dot" id="hudRadarDot"></div>
+        <div class="hud-info">
+          <div class="hud-title" id="hudTitle">ESP32 HARDWARE: CHECKING CONNECTION...</div>
+          <div class="hud-details" id="hudDetails">Target Device: <strong>ESP32_01</strong> | Architecture: <strong>Core 1 (40Hz) + Core 0 (Wi-Fi)</strong></div>
+        </div>
+      </div>
+      <div class="hud-right">
+        <div class="hud-stat">
+          <span class="hud-label">Ping Latency</span>
+          <span class="hud-val" id="hudPing">-- ms</span>
+        </div>
+        <div class="hud-stat">
+          <span class="hud-label">Last Stream Packet</span>
+          <span class="hud-val" id="hudLastPacket">Waiting...</span>
+        </div>
+        <button class="btn btn-sm btn-outline-neon" id="btnTestHardwarePacket" title="Simulate incoming ESP32 packet to test connection indicator">
+          <i class="fa-solid fa-signal"></i> Test ESP32 Stream
+        </button>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs Bar -->
+    <nav class="nav-tabs-bar">
+      <button class="nav-tab active" data-tab="tab-telemetry">
+        <i class="fa-solid fa-chart-line"></i> Live Telemetry &amp; Vitals
+      </button>
+      <button class="nav-tab" data-tab="tab-tinyml">
+        <i class="fa-solid fa-brain"></i> TinyML Edge AI Engine
+      </button>
+      <button class="nav-tab" data-tab="tab-report">
+        <i class="fa-solid fa-file-waveform"></i> 3-Incident Reports &amp; Diagnostics
+      </button>
+      <button class="nav-tab" data-tab="tab-downloads">
+        <i class="fa-solid fa-download"></i> ODF &amp; PDF Export Center
+      </button>
+      <button class="nav-tab" data-tab="tab-settings">
+        <i class="fa-solid fa-gear"></i> Patient Profile &amp; Settings
+      </button>
+    </nav>
+
+    <!-- Strict Siren Acknowledge / Silence Banner -->
+    <div id="alarmSilenceBox" class="hidden" style="margin-top: 10px; margin-bottom: 20px; text-align: center;">
+      <button id="btnSilenceAlarm" class="btn btn-danger btn-pulse" style="width: 100%; padding: 18px 28px; font-size: 1.15rem; font-weight: 800; box-shadow: 0 0 35px rgba(255, 0, 85, 0.9);">
+        <i class="fa-solid fa-volume-xmark"></i> 🔇 ACKNOWLEDGE &amp; SILENCE STRICT EMERGENCY SIREN
+      </button>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 1: LIVE TELEMETRY & VITALS -->
+    <!-- ========================================================================= -->
+    <div class="tab-pane active" id="tab-telemetry">
+      <div class="dashboard-grid">
+        <!-- Left Column: Metrics & Real-Time Matrix -->
+        <section class="pane vitals-pane">
+          <!-- System State Card -->
+          <div class="state-card state-normal" id="stateCard">
+            <div class="state-icon" id="stateIcon">
+              <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div class="state-details">
+              <h3 id="stateTitle">Monitoring Normal</h3>
+              <p id="stateDesc">Dual-core ESP32 actively streaming real-time vitals and kinematics.</p>
+            </div>
+            <div class="state-timer hidden" id="cancelTimerBox">
+              <span id="timerSeconds">6</span>s
+              <small>Cancel Window</small>
+            </div>
+          </div>
+
+          <!-- 4 PRIMARY VITALS & TINYML METRICS CARDS GRID (COMES FIRST) -->
+          <div class="metrics-grid">
+            <!-- Heart Rate -->
+            <div class="metric-card card-bpm">
+              <div class="metric-header">
+                <span>Heart Rate (MAX30105)</span>
+                <i class="fa-solid fa-heart-pulse metric-icon bpm-icon" id="bpmIcon"></i>
+              </div>
+              <div class="metric-value">
+                <span id="valBPM">--</span> <small>BPM</small>
+              </div>
+              <div class="metric-footer" id="valBPMStatus">Normal resting range (60-100 BPM)</div>
+            </div>
+
+            <!-- SpO2 -->
+            <div class="metric-card card-spo2">
+              <div class="metric-header">
+                <span>Blood Oxygen (SpO2)</span>
+                <i class="fa-solid fa-lungs metric-icon spo2-icon"></i>
+              </div>
+              <div class="metric-value">
+                <span id="valSpO2">--</span> <small>%</small>
+              </div>
+              <div class="progress-bar-container">
+                <div class="progress-bar" id="spo2Progress" style="width: 0%;"></div>
+              </div>
+              <div class="metric-footer" id="valSpO2Status">Optimal oxygen saturation (&gt;95%)</div>
+            </div>
+
+            <!-- Acceleration G-Force -->
+            <div class="metric-card card-accel">
+              <div class="metric-header">
+                <span>Impact Acceleration</span>
+                <i class="fa-solid fa-person-falling metric-icon accel-icon"></i>
+              </div>
+              <div class="metric-value">
+                <span id="valAccel">0.00</span> <small>G</small>
+              </div>
+              <div class="threshold-indicator">
+                <span>0G</span>
+                <div class="threshold-track">
+                  <div class="threshold-fill" id="accelFill" style="width: 0%;"></div>
+                  <div class="threshold-mark" id="accelThresholdMark" style="left: 66.25%;" title="Trigger Threshold: 2.65G"></div>
+                </div>
+                <span>4G</span>
+              </div>
+              <div class="metric-footer" id="accelThresholdFooter">Custom Trigger Threshold: &gt;2.65G</div>
+
+              <!-- Live Dynamic Fall Threshold Controller -->
+              <div class="threshold-adjuster">
+                <div class="adjuster-header">
+                  <span><i class="fa-solid fa-sliders text-neon-cyan"></i> Custom Sensitivity:</span>
+                  <span class="threshold-live-val" id="dispThresholdVal">2.65 G</span>
+                </div>
+                <div class="adjuster-controls">
+                  <input type="range" id="thresholdRange" min="1.50" max="4.00" step="0.05" value="2.65" title="Drag to adjust sensitivity">
+                  <button class="btn btn-xs btn-outline-cyan" id="btnSaveThreshold" title="Save threshold live to database">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Set Live
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- TinyML Edge Prediction -->
+            <div class="metric-card card-tinyml">
+              <div class="metric-header">
+                <span>TinyML Edge Prediction</span>
+                <i class="fa-solid fa-microchip metric-icon text-neon-green"></i>
+              </div>
+              <div class="metric-value">
+                <span id="miniTinyClass" style="font-size: 1.25rem; color: #00ff88;">Awaiting Data</span>
+              </div>
+              <div class="confidence-badge">
+                <span id="miniTinyConf">--% Confidence</span> | <span id="miniTinyLatency">1.8ms Latency</span>
+              </div>
+              <div class="metric-footer">Running on ESP32 Core 1</div>
+            </div>
+          </div>
+
+          <!-- FAST ACCURATE SENSOR ORIENTATION MATRIX & HUD (COMES UNDER THE 4 METRICS CARDS) -->
+          <div class="sensor-matrix-card">
+            <div class="matrix-header">
+              <h3><i class="fa-solid fa-compass text-neon-cyan"></i> Real-Time Kinematic Vector &amp; Posture Matrix</h3>
+              <div class="matrix-live-tag">
+                <span class="status-dot"></span> ULTRA-FAST PIPELINE
+              </div>
+            </div>
+            <div class="matrix-grid">
+              <div class="matrix-cell">
+                <div class="cell-label">Tilt Angle (θ)</div>
+                <div class="cell-val text-neon-cyan" id="holoTilt">0°</div>
+                <div class="cell-sub">Vertical Deviation</div>
+              </div>
+              <div class="matrix-cell">
+                <div class="cell-label">Posture Status</div>
+                <div class="cell-val text-neon-green" id="holoPosture">Upright</div>
+                <div class="cell-sub">Kinematic Alignment</div>
+              </div>
+              <div class="matrix-cell">
+                <div class="cell-label">Pitch Angle</div>
+                <div class="cell-val" id="holoPitch">0°</div>
+                <div class="cell-sub">Forward / Back</div>
+              </div>
+              <div class="matrix-cell">
+                <div class="cell-label">Roll Angle</div>
+                <div class="cell-val" id="holoRoll">0°</div>
+                <div class="cell-sub">Lateral Tilt</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Multi-Sensor Waveform Chart -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <h3><i class="fa-solid fa-chart-line text-neon-blue"></i> Real-Time Multi-Parameter Waveform</h3>
+              <div class="chart-legend">
+                <span class="legend-item" style="color: #ff0055;"><span class="dot" style="background:#ff0055;"></span> G-Force</span>
+                <span class="legend-item" style="color: #00f5ff;"><span class="dot" style="background:#00f5ff;"></span> Heart Rate</span>
+                <span class="legend-item" style="color: #00ff88;"><span class="dot" style="background:#00ff88;"></span> SpO2</span>
+              </div>
+            </div>
+            <div class="chart-container">
+              <canvas id="liveTelemetryChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Hardware Remote Controls & Activity Simulator -->
+          <div class="controls-card">
+            <h3><i class="fa-solid fa-sliders text-neon-cyan"></i> Hardware Control &amp; Testing Panel</h3>
+            <p class="controls-desc">Trigger cloud commands or simulate activity profiles to verify emergency sirens and reports before going live.</p>
+            <div class="btn-group">
+              <button class="btn btn-danger" id="btnSimulateFall">
+                <i class="fa-solid fa-person-falling-burst"></i> Trigger Fall Impact ('f')
+              </button>
+              <button class="btn btn-warning" id="btnSimulateCancel">
+                <i class="fa-solid fa-hand-pulse"></i> Cancel Alert / Calibrate ('c')
+              </button>
+              <button class="btn btn-secondary" id="btnResetNormal">
+                <i class="fa-solid fa-rotate-right"></i> Reset State
+              </button>
+              <button class="btn btn-info" id="btnCalibrate">
+                <i class="fa-solid fa-scale-balanced"></i> Re-Calibrate Baseline ('z')
+              </button>
+            </div>
+
+            <div class="tinyml-injector">
+              <span class="injector-label"><i class="fa-solid fa-flask text-neon-green"></i> Activity Simulator:</span>
+              <div class="injector-buttons">
+                <button class="btn-pill" id="btnSimWalk"><i class="fa-solid fa-person-walking"></i> Walking</button>
+                <button class="btn-pill" id="btnSimSit"><i class="fa-solid fa-couch"></i> Sitting</button>
+                <button class="btn-pill" id="btnSimStairs"><i class="fa-solid fa-stairs"></i> Stairs</button>
+                <button class="btn-pill" id="btnSimStumble"><i class="fa-solid fa-person-falling"></i> Stumble</button>
+                <button class="btn-pill" id="btnSimHardFall" style="border-color: #ff0055; color: #ff0055;"><i class="fa-solid fa-skull-crossbones"></i> Severe Fall</button>
+                <button class="btn-pill" id="btnSimSyncope" style="border-color: #a855f7; color: #a855f7;"><i class="fa-solid fa-bed-pulse"></i> Fainting</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Right Column: AI Live Summaries -->
+        <section class="pane reports-pane">
+          <div class="pane-header">
+            <h2><i class="fa-solid fa-brain text-neon-cyan"></i> Emergency Health Feed</h2>
+            <span class="ai-badge"><i class="fa-solid fa-sparkles"></i> Gemini AI</span>
+          </div>
+
+          <div class="reports-container" id="reportsFeed">
+            <div class="report-card report-welcome">
+              <div class="report-header">
+                <div class="report-title"><i class="fa-solid fa-circle-check text-neon-green"></i> Live Monitoring Feed Ready</div>
+                <span class="report-time">Live</span>
+              </div>
+              <div class="report-body">
+                Connected to cloud database. Emergency events and TinyML classifications will stream here in real-time.
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 2: TINYML EDGE AI ENGINE -->
+    <!-- ========================================================================= -->
+    <div class="tab-pane" id="tab-tinyml">
+      <div class="tinyml-dashboard">
+        <div class="tinyml-hero-card">
+          <div class="tinyml-hero-content">
+            <div class="hero-tag"><i class="fa-solid fa-microchip"></i> On-Device Tiny Machine Learning</div>
+            <h2>ESP32 Edge Fall &amp; Motion Classifier</h2>
+            <p>Runs a quantized, ultra-fast Decision Tree &amp; Feature Extractor directly on the ESP32 microcontroller (Core 1). By processing 40Hz spatial acceleration and optical vitals locally in 1.8 milliseconds, it achieves <strong>0ms network latency</strong> and immune offline protection.</p>
+          </div>
+          <div class="tinyml-hero-specs">
+            <div class="spec-badge"><i class="fa-solid fa-gauge-high text-neon-blue"></i> <strong>1.8 ms</strong> Latency</div>
+            <div class="spec-badge"><i class="fa-solid fa-microchip text-neon-cyan"></i> <strong>Core 1</strong> FreeRTOS</div>
+            <div class="spec-badge"><i class="fa-solid fa-memory text-neon-green"></i> <strong>16.4 KB</strong> Flash</div>
+            <div class="spec-badge"><i class="fa-solid fa-bullseye text-neon-yellow"></i> <strong>98.4%</strong> Accuracy</div>
+          </div>
+        </div>
+
+        <div class="tinyml-grid">
+          <div class="tinyml-card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-bullseye text-neon-green"></i> Real-Time Inference Output</h3>
+              <span class="badge-live"><span class="pulse-ring"></span> INFERENCING AT 40Hz</span>
+            </div>
+
+            <div class="prediction-highlight" id="predictionHighlight">
+              <div class="pred-label">CURRENT PREDICTED CLASS:</div>
+              <div class="pred-class" id="tinymlPredictedClass">Awaiting Sensor Stream...</div>
+              <div class="pred-meta">
+                <span>Confidence: <strong id="tinymlConfidence">--%</strong></span>
+                <span>Severity: <strong id="tinymlSeverity" style="color: #00ff88;">NORMAL</strong></span>
+              </div>
+              <p class="pred-explanation" id="tinymlExplanation">
+                Waiting for incoming acceleration and vitals packets to evaluate motion signature.
+              </p>
+            </div>
+
+            <div class="probabilities-section">
+              <h4>Class Probability Distribution</h4>
+              <div class="prob-list" id="probList">
+                <div class="prob-item" data-class="WALKING">
+                  <div class="prob-label"><span>Normal Walking / ADL</span><span class="prob-pct">0%</span></div>
+                  <div class="prob-bar-track"><div class="prob-bar-fill" style="width: 0%; background: #00ff88;"></div></div>
+                </div>
+                <div class="prob-item" data-class="RESTING">
+                  <div class="prob-label"><span>Stationary / Sitting</span><span class="prob-pct">0%</span></div>
+                  <div class="prob-bar-track"><div class="prob-bar-fill" style="width: 0%; background: #00f5ff;"></div></div>
+                </div>
+                <div class="prob-item" data-class="STAIRS">
+                  <div class="prob-label"><span>Stairs / Dynamic Motion</span><span class="prob-pct">0%</span></div>
+                  <div class="prob-bar-track"><div class="prob-bar-fill" style="width: 0%; background: #3b82f6;"></div></div>
+                </div>
+                <div class="prob-item" data-class="STUMBLE">
+                  <div class="prob-label"><span>Stumble / Trip (Near-Fall)</span><span class="prob-pct">0%</span></div>
+                  <div class="prob-bar-track"><div class="prob-bar-fill" style="width: 0%; background: #ffaa00;"></div></div>
+                </div>
+                <div class="prob-item" data-class="FALL_CRITICAL">
+                  <div class="prob-label"><span>Severe High-Impact Fall</span><span class="prob-pct">0%</span></div>
+                  <div class="prob-bar-track"><div class="prob-bar-fill" style="width: 0%; background: #ff0055;"></div></div>
+                </div>
+                <div class="prob-item" data-class="SYNCOPE">
+                  <div class="prob-label"><span>Syncope / Sudden Collapse</span><span class="prob-pct">0%</span></div>
+                  <div class="prob-bar-track"><div class="prob-bar-fill" style="width: 0%; background: #a855f7;"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tinyml-card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-wave-square text-neon-cyan"></i> Extracted Kinematic Features</h3>
+              <span class="feature-tag">Feature Pipeline</span>
+            </div>
+
+            <div class="features-table-container">
+              <table class="features-table">
+                <thead>
+                  <tr>
+                    <th>Feature Parameter</th>
+                    <th>Equation / Metric</th>
+                    <th>Current Value</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Peak Impact G ($G_{peak}$)</strong></td>
+                    <td>$\max(a_t)$ over 500ms</td>
+                    <td><span id="featPeakG">0.00 G</span></td>
+                    <td><span class="status-pill-ok">Normal (&lt;2.65G)</span></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Signal Vector Magnitude</strong></td>
+                    <td>$SVM = \sqrt{a_x^2 + a_y^2 + a_z^2}$</td>
+                    <td><span id="featSVM">0.00 G</span></td>
+                    <td><span class="status-pill-ok">Baseline</span></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Posture Tilt Angle ($\theta$)</strong></td>
+                    <td>$\arccos(a_z / SVM)$</td>
+                    <td><span id="featTilt">0°</span></td>
+                    <td><span class="status-pill-ok">Upright</span></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Free-Fall Window ($T_{ff}$)</strong></td>
+                    <td>Duration $SVM &lt; 0.65\text{G}$</td>
+                    <td><span id="featFreeFall">0 ms</span></td>
+                    <td><span class="status-pill-ok">No drop</span></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Post-Impact Immobility</strong></td>
+                    <td>Variance over post-shock 3s</td>
+                    <td><span id="featImmobility">0%</span></td>
+                    <td><span class="status-pill-ok">Active</span></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Cardiac Stress Score</strong></td>
+                    <td>$\Delta\text{BPM} + \Delta\text{SpO}_2$ index</td>
+                    <td><span id="featCardiac">0 / 100</span></td>
+                    <td><span class="status-pill-ok">Nominal</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="filter-architecture-box">
+              <h4><i class="fa-solid fa-microchip text-neon-green"></i> ESP32 Firmware TinyML Integration Note</h4>
+              <p>The ESP32 firmware (<code>sketch.ino</code>) contains the embedded C++ TinyML classification engine. When flashed, the ESP32 performs this inference entirely on-chip, and streams both raw vitals and the classification prediction to Firebase!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 3: 3-INCIDENT REPORTS & DIAGNOSTICS -->
+    <!-- ========================================================================= -->
+    <div class="tab-pane" id="tab-report">
+      <div class="report-builder-container">
+        <!-- Multi-Incident Selector & Actions -->
+        <div class="incidents-selector-card">
+          <div class="selector-header">
+            <div>
+              <h3><i class="fa-solid fa-layer-group text-neon-cyan"></i> Recorded Fall Incidents &amp; Multi-Report Hub</h3>
+              <p class="badge-sub">The system recorded fall events. You can select, view, and export reports for Incident #1, #2, #3, or all 3 combined!</p>
+            </div>
+            <!-- Quick Incident Simulation Trigger for testing -->
+            <div class="incident-test-triggers">
+              <button class="btn btn-sm btn-outline-neon" id="btnSimTriggerInc1"><i class="fa-solid fa-play"></i> Trigger Incident #1</button>
+              <button class="btn btn-sm btn-outline-neon" id="btnSimTriggerInc2"><i class="fa-solid fa-play"></i> Trigger Incident #2</button>
+              <button class="btn btn-sm btn-outline-neon" id="btnSimTriggerInc3"><i class="fa-solid fa-play"></i> Trigger Incident #3</button>
+            </div>
+          </div>
+
+          <!-- Incidents Button Grid -->
+          <div class="incident-buttons-grid" id="incidentButtonsGrid">
+            <!-- Dynamic Incident Cards rendered here -->
+          </div>
+        </div>
+
+        <!-- Live Document Preview -->
+        <div class="report-document-card">
+          <div class="document-header">
+            <div class="doc-badge">
+              <i class="fa-solid fa-file-lines text-neon-blue"></i>
+              <span id="previewDocTitleBadge">Viewing: Consolidated 3-Incident Report</span>
+            </div>
+            <div class="doc-actions">
+              <button class="btn btn-sm btn-download-odf" id="btnDocDownloadOdf">
+                <i class="fa-solid fa-file-word"></i> Download ODF (.odt)
+              </button>
+              <button class="btn btn-sm btn-download-pdf" id="btnDocDownloadPdf">
+                <i class="fa-solid fa-file-pdf"></i> Download PDF
+              </button>
+            </div>
+          </div>
+
+          <div class="document-paper" id="documentPaper">
+            <!-- Dynamically populated document preview -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 4: ODF & PDF EXPORT CENTER -->
+    <!-- ========================================================================= -->
+    <div class="tab-pane" id="tab-downloads">
+      <div class="download-center">
+        <div class="download-header">
+          <h2><i class="fa-solid fa-download text-neon-blue"></i> Diagnostic Report Export Center</h2>
+          <p>Export comprehensive medical incident reports for each detected fall or download the 3-incident consolidated diagnostic report. <strong>Generated 100% on the web.</strong></p>
+        </div>
+
+        <div class="download-cards-grid">
+          <!-- Featured Consolidated 3-Incident Report -->
+          <div class="download-card card-consolidated full-width-card">
+            <div class="dl-icon"><i class="fa-solid fa-file-shield text-neon-cyan"></i></div>
+            <div class="dl-badge">Primary Recommended Report</div>
+            <h3>Download Consolidated 3-Incident Report</h3>
+            <p>Generates an extensive comparative clinical report analyzing all 3 fall incidents side-by-side with multi-parameter matrix tables, individual breakdowns, and cumulative fall frequency risk evaluation.</p>
+            <div class="dl-btn-row">
+              <button class="btn btn-primary btn-neon" id="btnDownloadConsolidatedOdf">
+                <i class="fa-solid fa-file-word"></i> Download 3-Incident ODF (.odt)
+              </button>
+              <button class="btn btn-danger btn-neon" id="btnDownloadConsolidatedPdf">
+                <i class="fa-solid fa-file-pdf"></i> Download 3-Incident PDF (.pdf)
+              </button>
+            </div>
+          </div>
+
+          <!-- Individual Incident 1 Card -->
+          <div class="download-card card-odf">
+            <div class="dl-icon"><i class="fa-solid fa-file-lines text-neon-cyan"></i></div>
+            <div class="dl-badge">Incident #1</div>
+            <h3 id="dlCardTitleInc1">Incident #1 Report</h3>
+            <p id="dlCardDescInc1">Dedicated report for Fall Event #1 with telemetry and TinyML parameters.</p>
+            <div class="dl-btn-row">
+              <button class="btn btn-secondary btn-sm" id="btnDownloadInc1Odf"><i class="fa-solid fa-file-word"></i> ODF (.odt)</button>
+              <button class="btn btn-secondary btn-sm" id="btnDownloadInc1Pdf"><i class="fa-solid fa-file-pdf"></i> PDF (.pdf)</button>
+            </div>
+          </div>
+
+          <!-- Individual Incident 2 Card -->
+          <div class="download-card card-odf">
+            <div class="dl-icon"><i class="fa-solid fa-file-lines text-neon-cyan"></i></div>
+            <div class="dl-badge">Incident #2</div>
+            <h3 id="dlCardTitleInc2">Incident #2 Report</h3>
+            <p id="dlCardDescInc2">Dedicated report for Fall Event #2 with telemetry and TinyML parameters.</p>
+            <div class="dl-btn-row">
+              <button class="btn btn-secondary btn-sm" id="btnDownloadInc2Odf"><i class="fa-solid fa-file-word"></i> ODF (.odt)</button>
+              <button class="btn btn-secondary btn-sm" id="btnDownloadInc2Pdf"><i class="fa-solid fa-file-pdf"></i> PDF (.pdf)</button>
+            </div>
+          </div>
+
+          <!-- Individual Incident 3 Card -->
+          <div class="download-card card-odf">
+            <div class="dl-icon"><i class="fa-solid fa-file-lines text-neon-cyan"></i></div>
+            <div class="dl-badge">Incident #3</div>
+            <h3 id="dlCardTitleInc3">Incident #3 Report</h3>
+            <p id="dlCardDescInc3">Dedicated report for Fall Event #3 with telemetry and TinyML parameters.</p>
+            <div class="dl-btn-row">
+              <button class="btn btn-secondary btn-sm" id="btnDownloadInc3Odf"><i class="fa-solid fa-file-word"></i> ODF (.odt)</button>
+              <button class="btn btn-secondary btn-sm" id="btnDownloadInc3Pdf"><i class="fa-solid fa-file-pdf"></i> PDF (.pdf)</button>
+            </div>
+          </div>
+
+          <!-- JSON Dataset Card -->
+          <div class="download-card card-json">
+            <div class="dl-icon"><i class="fa-solid fa-code text-neon-green"></i></div>
+            <div class="dl-badge">Raw Data Stream</div>
+            <h3>Download JSON Telemetry (.json)</h3>
+            <p>Exports complete machine-readable telemetry dataset for all 3 incidents with 3-axis acceleration vectors and probability arrays.</p>
+            <button class="btn btn-secondary btn-block" id="btnDownloadJsonMain">
+              <i class="fa-solid fa-download"></i> Download JSON Telemetry
+            </button>
+          </div>
+        </div>
+
+        <div class="download-toast hidden" id="downloadToast">
+          <i class="fa-solid fa-circle-check text-neon-green"></i>
+          <span id="downloadToastMsg">File successfully downloaded!</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 5: PATIENT PROFILE & SETTINGS -->
+    <!-- ========================================================================= -->
+    <div class="tab-pane" id="tab-settings">
+      <div class="report-config-card">
+        <div class="config-header">
+          <h3><i class="fa-solid fa-user-gear text-neon-cyan"></i> Patient Profile &amp; Cloud Database Record</h3>
+          <p class="badge-sub">These details are saved in Firebase under your account email and automatically appear on all generated reports.</p>
+        </div>
+
+        <form id="editProfileForm" onsubmit="return false;">
+          <div class="config-form-grid">
+            <div class="form-group">
+              <label><i class="fa-solid fa-user"></i> Patient Full Name</label>
+              <input type="text" id="editPatientName" placeholder="Full Name">
+            </div>
+            <div class="form-group">
+              <label><i class="fa-solid fa-cake-candles"></i> Age</label>
+              <input type="number" id="editPatientAge" placeholder="Age in years">
+            </div>
+            <div class="form-group">
+              <label><i class="fa-solid fa-user-doctor"></i> Primary Caregiver Name</label>
+              <input type="text" id="editCaregiverName" placeholder="Caregiver Name">
+            </div>
+            <div class="form-group">
+              <label><i class="fa-solid fa-phone"></i> Emergency Phone Number</label>
+              <input type="tel" id="editEmergencyPhone" placeholder="+1 ...">
+            </div>
+            <div class="form-group full-width">
+              <label><i class="fa-solid fa-notes-medical"></i> Clinical Observations &amp; Pre-existing Conditions</label>
+              <textarea id="editClinicalNotes" rows="3" placeholder="Enter clinical observations, patient medical history, or instructions for doctors..."></textarea>
+            </div>
+            <div class="form-group full-width">
+              <label><i class="fa-solid fa-person-falling-burst text-neon-pink"></i> Dynamic Fall Acceleration Trigger Threshold (G)</label>
+              <div style="display: flex; gap: 12px; align-items: center;">
+                <input type="number" id="editFallThreshold" step="0.05" min="1.50" max="4.00" value="2.65" style="max-width: 140px;">
+                <span class="text-dim" style="font-size: 0.85rem;">Clinical Default: <strong>2.65G</strong>. Higher values require harder impact; lower values increase trigger sensitivity for frail or high-risk patients.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="config-actions">
+            <button class="btn btn-primary btn-neon" id="btnUpdateProfile">
+              <i class="fa-solid fa-floppy-disk"></i> Update Cloud Profile &amp; Threshold in Database
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="tinyml-engine.js"></script>
+  <script src="report-generator.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
